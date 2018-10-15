@@ -1,0 +1,4 @@
+Tensor("arg0:0", shape=(), dtype=string)
+Epoch Complete
+Validation complete
+1

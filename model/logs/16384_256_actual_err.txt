@@ -1,0 +1,9 @@
+2018-07-08 13:25:47.004651: I tensorflow/core/platform/cpu_feature_guard.cc:140] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 AVX512F FMA
+2018-07-08 13:25:57.052972: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:94] Filling up shuffle buffer (this may take a while): 4272 of 16384
+2018-07-08 13:26:07.053982: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:94] Filling up shuffle buffer (this may take a while): 8403 of 16384
+2018-07-08 13:26:17.052902: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:94] Filling up shuffle buffer (this may take a while): 12549 of 16384
+2018-07-08 13:26:25.650289: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:129] Shuffle buffer filled.
+2018-07-08 13:29:44.213514: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:94] Filling up shuffle buffer (this may take a while): 4850 of 16384
+2018-07-08 13:29:54.211756: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:94] Filling up shuffle buffer (this may take a while): 9542 of 16384
+2018-07-08 13:30:04.212656: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:94] Filling up shuffle buffer (this may take a while): 14390 of 16384
+2018-07-08 13:30:08.244038: I tensorflow/core/kernels/data/shuffle_dataset_op.cc:129] Shuffle buffer filled.
