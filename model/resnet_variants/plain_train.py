@@ -15,7 +15,7 @@ from tensorflow import set_random_seed
 
 #classes =['Asterionella','Aulocoseira','Colonial Cyanobacteria','Cryptomonas','Detritus','Dolichospermum','Filamentous cyanobacteria','Romeria','Staurastrum']
 #classes = ["Ankistrodesmus","Aphanizomenon","Aphanothece","Asterionella","Aulocoseira","Auxospore","Ceratium","Chroococcus","Chroomonas","Ciliate","Cilliate","Closterium","Colonial Cyanobacteria","Cosmarium","Cryptomonas","Cymbella","Detritus","Diatoma","Dictyospaerium","Dinobryon","Dolichospermum","Eudorina","Euglena","Eunotia","Filamentous Cyanobacteria","Fragilaria","Gymnodinium","Heliozoan","Kirchneriella","Mallomonas","Merismopedia","Mesodinium","Micractinium","Microcystis","Mougeotia","Navicula","Nostoc","Oocystis","Pandorina","Pediastrum","Pennate diatom","Peridinium","Rhizosolenia","Romeria","Scenedesmus","Snowella","Sphaerocystis","Staurastrum","Staurodesmus","Stephanodiscus","Synedra","Synura","Tabellaria","Tetraspora","Trachelomonas","Ulnaria","Unidentified chlorophyte","Unidentified diatom","Uroglenopsis","Woronichinia","Zooplankton"]
-classes = ["Asterionella","Aulocoseira","Colonial Cyanobacteria","Detritus","Dinobryon","Dolichospermum","Filamentous Cyanobacteria","Fragilaria","Mougeotia","Pennate diatom","Tabellaria"] 
+classes = ["Colonial Cyanobacteria","Detritus"] 
 
 #Get the number of classes
 # - Used for the size of the final fully connedcted layer (Softmax)
@@ -69,38 +69,38 @@ with tf.name_scope('input'):
 #Graph Parameteres 
 
 filter_size_conv1 = 3
-num_filters_conv1 = 32
+num_filters_conv1 = 64
 
 filter_size_conv2 = 3
-num_filters_conv2 = 16
+num_filters_conv2 = 64
 
 filter_size_conv3 = 3
-num_filters_conv3 = 64
+num_filters_conv3 = 128
 
 filter_size_conv4 = 3
-num_filters_conv4 = 32
+num_filters_conv4 = 128
 
 filter_size_conv5 = 3
-num_filters_conv5 = 128
+num_filters_conv5 = 256
 
 filter_size_conv6 = 3
-num_filters_conv6 = 128
+num_filters_conv6 = 256
 
 filter_size_conv7 = 3
-num_filters_conv7 = 64
+num_filters_conv7 = 512
 
 filter_size_conv8 = 3
-num_filters_conv8 = 256
+num_filters_conv8 = 512
 
 filter_size_conv9 = 3
-num_filters_conv9 = 256
+num_filters_conv9 = 512
 
 filter_size_conv10 = 3
-num_filters_conv10 = 128
+num_filters_conv10 = 512
 
 
-fc_layer_one = 512
-fc_layer_two = 1024
+fc_layer_one = 4096
+fc_layer_two = 8192
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -213,21 +213,21 @@ layer_conv6 = create_conv_layer(input=layer_conv5,
         conv_filter_size=filter_size_conv6,
         num_filters=num_filters_conv6,
         name="Convolutional_Layer_6",
-        pool = False)
+        pool = True, group_num=3)
 
 layer_conv7 = create_conv_layer(input=layer_conv6,
         num_input_channels=num_filters_conv6,
         conv_filter_size=filter_size_conv7,
         num_filters=num_filters_conv7,
         name="Convolutional_Layer_7",
-        pool = True, group_num=3)
+        pool = False)
 
 layer_conv8 = create_conv_layer(input=layer_conv7,
         num_input_channels=num_filters_conv7,
         conv_filter_size=filter_size_conv8,
         num_filters=num_filters_conv8,
         name="Convolutional_Layer_8",
-        pool = False)
+        pool = True, group_num=4)
 
 layer_conv9 = create_conv_layer(input=layer_conv8,
         num_input_channels=num_filters_conv8,
@@ -241,12 +241,12 @@ layer_conv10 = create_conv_layer(input=layer_conv9,
         conv_filter_size=filter_size_conv10,
         num_filters=num_filters_conv10,
         name="Convolutional_Layer_10",
-        pool = True, group_num=4)
+        pool = True, group_num=5)
 
 layer_flat = create_flat_layer(layer_conv10)
 
 num_features = layer_flat.get_shape()[1:4].num_elements()
-layer_fc1= create_fc_layer(input=layer_flat, num_inputs= num_features, num_outputs=fc_layer_one, use_relu=False, use_leaky_relu=True,name="Fully_Connected_Layer_1")
+layer_fc1= create_fc_layer(input=layer_flat, num_inputs= num_features, num_outputs=fc_layer_one, use_relu=True,name="Fully_Connected_Layer_1")
 layer_fc2= create_fc_layer(input=layer_fc1, num_inputs=fc_layer_one, num_outputs=fc_layer_two, use_relu=True, name="Fully_Connected_Layer_2")
 
 with tf.name_scope('dropout'):
@@ -263,7 +263,7 @@ with tf.name_scope('cost'):
     cost = tf.reduce_mean(cross_entropy)
 tf.summary.scalar('cost',cost)
 with tf.name_scope('train'):
-    optimizer = tf.train.AdamOptimizer(learning_rate=8e-6).minimize(cost)
+    optimizer = tf.train.AdamOptimizer(learning_rate=8e-7).minimize(cost)
 
 with tf.name_scope('accuracy'):
     with tf.name_scope('correct_prediction'):
@@ -310,24 +310,34 @@ def _parser(example):
     return image, label
 
 def train():
-    training_filename = ["/home/szaman5/Phytoplankton_Classifier/complete_data/train.tfrecords"]
-    validation_filename = ["/home/szaman5/Phytoplankton_Classifier/complete_data/validation.tfrecords"]
-
-    filename = tf.placeholder(tf.string, shape=[None])
-
-    dataset = tf.data.TFRecordDataset(filename)
+    #training_filename = ["/home/szaman5/Phytoplankton_Classifier/complete_data/train.tfrecords"]
+    validation_filename = ["/home/szaman5/Phytoplankton_Classifier/two_class_data/validation.tfrecords"]
+    data_dir = "/home/szaman5/Phytoplankton_Classifier/two_class_data/"
+    data_list = [data_dir + "train" + str(i)+".tfrecords" for i in range(100)]
+   
+    #dataset = tf.data.TFRecordDataset(filename)
     
-    dataset = dataset.map(_parser,num_parallel_calls=32)
-    dataset = dataset.shuffle(buffer_size =8192)
-    dataset = dataset.batch(128)
+    #dataset = dataset.map(_parser,num_parallel_calls=32)
+    dataset = (tf.data.Dataset.from_tensor_slices(data_list).interleave(lambda x:tf.data.TFRecordDataset(x).map(_parser, num_parallel_calls = 48).prefetch(256),cycle_length=24,block_length=32)) 
+    dataset = dataset.shuffle(buffer_size =2048)
+    dataset = dataset.batch(32)
     dataset = dataset.prefetch(buffer_size = 512)
     
     iterator = dataset.make_initializable_iterator()
 
     next_element = iterator.get_next()
 
-    
-    NUM_EPOCHS = 200
+    filename = tf.placeholder(tf.string, shape=[None])
+  
+    val_dataset = tf.data.TFRecordDataset(filename)
+    val_dataset = val_dataset.map(_parser, num_parallel_calls=20)
+    val_dataset = val_dataset.shuffle(buffer_size = 2048)
+    val_dataset = val_dataset.batch(64)
+    val_dataset = val_dataset.prefetch(buffer_size = 100)
+
+    val_iterator = val_dataset.make_initializable_iterator()
+    next_val_element = val_iterator.get_next()
+    NUM_EPOCHS = 40
     #summary = session.run(merged)
     #train_writer.add_summary(summary,0)
     confusion_matrix = 0
@@ -335,30 +345,34 @@ def train():
     #conf_matrix = tf.placeholder(tf.float32, shape=[num_classes,num_classes,1], name='confustion_matrix')
    
     for epoch in range(NUM_EPOCHS):
-        session.run(iterator.initializer, feed_dict={filename:training_filename})
+        session.run(iterator.initializer)
         num_batches = 0
         epoch_train_accuracy = 0
         epoch_val_accuracy = 0
+        epoch_train_cost = 0
+        epoch_val_cost = 0
         while True:
             try:
                 x_batch, y_true_batch = session.run(next_element)
                 feed_dict_tr = {x: x_batch, y_true: y_true_batch, keep_prob:0.3}
-                train,acc,summary = session.run([optimizer,accuracy,merged], feed_dict=feed_dict_tr)
+                train,acc,t_cost,summary = session.run([optimizer,accuracy,cost,merged], feed_dict=feed_dict_tr)
                 num_batches +=1
                 epoch_train_accuracy += acc
+                epoch_train_cost += t_cost
                 #print(pred)
                 #print(lab)
                 train_writer.add_summary(summary,epoch+1)
             except tf.errors.OutOfRangeError as e:
                 break
-        session.run(iterator.initializer, feed_dict = {filename:validation_filename})
+        session.run(val_iterator.initializer, feed_dict = {filename:validation_filename})
         valid_batches = 0
         while True:
             try:
-                x_valid_batch, y_valid_batch = session.run(next_element)
+                x_valid_batch, y_valid_batch = session.run(next_val_element)
                 feed_dict_val = {x:x_valid_batch,y_true:y_valid_batch, keep_prob:1}
                 val_loss,val_acc,summary,cm = session.run([cost,accuracy,merged,confusion], feed_dict_val)
                 epoch_val_accuracy += val_acc
+                epoch_val_cost += val_loss
                 valid_batches +=1
                 confusion_matrix +=cm
                 test_writer.add_summary(summary,epoch+1)
@@ -375,8 +389,8 @@ def train():
         temp_im = session.run(confusion_image)
         test_writer.add_summary(temp_im)
         confusion_matrix = 0 
-        msg = "Epoch {0} | Training accuracy {1:>6.4%}, Validation accuracy {2:>6.4%}"
-        print(msg.format(epoch+1,epoch_train_accuracy/num_batches,epoch_val_accuracy/valid_batches))
+        msg = "Epoch {0} | Training accuracy {1:>6.4%}, Validation accuracy {2:>6.4%}, Training cost {3:>6.4}, Validation cos {4:>6.4%}"
+        print(msg.format(epoch+1,epoch_train_accuracy/num_batches,epoch_val_accuracy/valid_batches,epoch_train_cost / num_batches,epoch_val_cost / valid_batches))
         
 
 

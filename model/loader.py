@@ -6,6 +6,7 @@ import numpy as np
 import multiprocessing
 import tensorflow as tf
 import imutils
+import random
 '''
 Roadmap for loader:
 
@@ -14,8 +15,13 @@ Roadmap for loader:
 '''
 
 
-writer = tf.python_io.TFRecordWriter('/home/szaman5/Phytoplankton_Classifier/complete_data/train.tfrecords')
-val_writer = tf.python_io.TFRecordWriter('/home/szaman5/Phytoplankton_Classifier/complete_data/validation.tfrecords')
+
+val_writer = tf.python_io.TFRecordWriter('/home/szaman5/Phytoplankton_Classifier/two_class_data/validation.tfrecords')
+
+writers = []
+for i in range(1000):
+    writer = tf.python_io.TFRecordWriter('/home/szaman5/Phytoplankton_Classifier/two_class_data/train'+str(i)+'.tfrecords')
+    writers.append(writer)
 
 def load_train(train_path, image_size, classes):
     images = []
@@ -80,9 +86,13 @@ def write_to_tf_records(image, label,val):
     if val == 'validation':
         val_writer.write(example.SerializeToString())
     else:
+        writer_num = random.randint(0,999)
+        print(len(writers))
+        print(writer_num)
+        writer = writers[writer_num]
         writer.write(example.SerializeToString())
 def main():
-    classes = ["Asterionella","Aulocoseira","Colonial Cyanobacteria","Detritus","Dinobryon","Dolichospermum","Filamentous Cyanobacteria","Fragilaria","Mougeotia","Pennate diatom","Tabellaria"] 
+    classes = ["Colonial Cyanobacteria","Detritus"] 
     #classes = ['Asterionella','Aulocoseira','Colonial Cyanobacteria','Cryptomonas','Detritus','Dolichospermum','Filamentous cyanobacteria','Romeria','Staurastrum']
     os.chdir("../")
     path = os.getcwd()

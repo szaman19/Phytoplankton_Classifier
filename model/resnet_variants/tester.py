@@ -78,23 +78,38 @@ def _parser(example):
 
 
 def train():
-    training_filename = ["/home/szaman5/Phytoplankton_Classifier/complete_data/train.tfrecords"]
+    #training_filename = ["/home/szaman5/Phytoplankton_Classifier/complete_data/train.tfrecords"]
     validation_filename = ["/home/szaman5/Phytoplankton_Classifier/complete_data/validation.tfrecords"]
+    data_dir = "/home/szaman5/Phytoplankton_Classifier/complete_data/"
+    data_list = [data_dir + "train" + str(i)+".tfrecords" for i in range(10)]
 
-    filename = tf.placeholder(tf.string, shape=[None])
 
-    dataset = tf.data.TFRecordDataset(filename)
+
+   
+    #dataset = tf.data.TFRecordDataset(filename)
     
-    dataset = dataset.map(_parser,num_parallel_calls=32)
+    dataset = (tf.data.Dataset.from_tensor_slices(data_list).interleave(lambda x:tf.data.TFRecordDataset(x).map(_parser, num_parallel_calls = 10),cycle_length=40,block_length=32))
+    #dataset = dataset.map(_parser,num_parallel_calls=32)
     dataset = dataset.shuffle(buffer_size =65536)
-    dataset = dataset.batch(64)
+    dataset = dataset.batch(256)
     dataset = dataset.prefetch(buffer_size = 512)
     
     iterator = dataset.make_initializable_iterator()
 
     next_element = iterator.get_next()
-
     
+
+    filename = tf.placeholder(tf.string, shape=[None])
+
+    val_dataset = tf.data.TFRecordDataset(filename)
+    val_dataset = val_dataset.map(_parser, num_parallel_calls=20)
+    val_dataset = val_dataset.shuffle(buffer_size = 2048)
+    val_dataset = val_dataset.batch(2048)
+    val_dataset = val_dataset.prefetch(buffer_size = 2048)
+
+    val_iterator = val_dataset.make_initializable_iterator()
+    next_val_element = val_iterator.get_next()
+
     NUM_EPOCHS = 200
     #summary = session.run(merged)
     #train_writer.add_summary(summary,0)
@@ -103,7 +118,7 @@ def train():
     #conf_matrix = tf.placeholder(tf.float32, shape=[num_classes,num_classes,1], name='confustion_matrix')
    
     for epoch in range(NUM_EPOCHS):
-        session.run(iterator.initializer, feed_dict={filename:training_filename})
+        session.run(iterator.initializer)
         num_batches = 0
         epoch_train_accuracy = 0
         epoch_val_accuracy = 0
@@ -120,17 +135,17 @@ def train():
                 #train_writer.add_summary(summary,epoch+1)
             except tf.errors.OutOfRangeError as e:
                 break
-        session.run(iterator.initializer, feed_dict = {filename:validation_filename})
+        session.run(val_iterator.initializer, feed_dict = {filename:validation_filename})
         valid_batches = 0
         while True:
             try:
-                x_valid_batch, y_valid_batch = session.run(next_element)
+                x_valid_batch, y_valid_batch = session.run(next_val_element)
                 feed_dict_val = {x:x_valid_batch,y_true:y_valid_batch, keep_prob:1}
                 res = session.run([y_true_cls], feed_dict_val)
                 #epoch_val_accuracy += val_acc
                 valid_batches +=1
                 print(res)
-                confusion_matrix +=cm
+                #confusion_matrix +=cm
             except tf.errors.OutOfRangeError as e:
                 #saver.save(session, "/home/szaman5/Phytoplankton_Classifier/balanced_model/vgg/")
                 break
