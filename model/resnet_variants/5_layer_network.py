@@ -16,8 +16,9 @@ import convnet as cnn
 #The Classes that will be used to train and identify in the model 
 
 #classes =['Asterionella','Aulocoseira','Colonial Cyanobacteria','Cryptomonas','Detritus','Dolichospermum','Filamentous cyanobacteria','Romeria','Staurastrum']
-classes = ["Ankistrodesmus","Aphanizomenon","Aphanothece","Asterionella","Aulocoseira","Auxospore","Ceratium","Chroococcus","Chroomonas","Ciliate","Cilliate","Closterium","Colonial Cyanobacteria","Cosmarium","Cryptomonas","Cymbella","Detritus","Diatoma","Dictyospaerium","Dinobryon","Dolichospermum","Eudorina","Euglena","Eunotia","Filamentous Cyanobacteria","Fragilaria","Gymnodinium","Heliozoan","Kirchneriella","Mallomonas","Merismopedia","Mesodinium","Micractinium","Microcystis","Mougeotia","Navicula","Nostoc","Oocystis","Pandorina","Pediastrum","Pennate diatom","Peridinium","Rhizosolenia","Romeria","Scenedesmus","Snowella","Sphaerocystis","Staurastrum","Staurodesmus","Stephanodiscus","Synedra","Synura","Tabellaria","Tetraspora","Trachelomonas","Ulnaria","Unidentified chlorophyte","Unidentified diatom","Uroglenopsis","Woronichinia","Zooplankton"]
- 
+#classes = ["Ankistrodesmus","Aphanizomenon","Aphanothece","Asterionella","Aulocoseira","Auxospore","Ceratium","Chroococcus","Chroomonas","Ciliate","Cilliate","Closterium","Colonial Cyanobacteria","Cosmarium","Cryptomonas","Cymbella","Detritus","Diatoma","Dictyospaerium","Dinobryon","Dolichospermum","Eudorina","Euglena","Eunotia","Filamentous Cyanobacteria","Fragilaria","Gymnodinium","Heliozoan","Kirchneriella","Mallomonas","Merismopedia","Mesodinium","Micractinium","Microcystis","Mougeotia","Navicula","Nostoc","Oocystis","Pandorina","Pediastrum","Pennate diatom","Peridinium","Rhizosolenia","Romeria","Scenedesmus","Snowella","Sphaerocystis","Staurastrum","Staurodesmus","Stephanodiscus","Synedra","Synura","Tabellaria","Tetraspora","Trachelomonas","Ulnaria","Unidentified chlorophyte","Unidentified diatom","Uroglenopsis","Woronichinia","Zooplankton"]
+
+classes = ["Colonial Cyanobacteria","Detritus"]
 #Get the number of classes
 # - Used for the size of the final fully connedcted layer (Softmax)
 # - To instantiate the Labels one-hot tensor 
@@ -66,7 +67,7 @@ keep_prob = tf.placeholder(tf.float32, name = 'keep_prob')
 
 #Graph Parameteres 
 
-filter_size_conv1 = 7
+filter_size_conv1 = 5
 num_filters_conv1 = 32
 
 filter_size_conv2 = 3
@@ -82,7 +83,8 @@ filter_size_conv5 = 3
 num_filters_conv5 = 128
 
 fc_layer_one = 1024
-fc_layer_two = 1024
+fc_layer_two = 2048
+
 layer_conv1 = cnn.create_conv_layer(input=x,
         num_input_channels=num_channels,
         conv_filter_size=filter_size_conv1,
@@ -171,43 +173,63 @@ saver = tf.train.Saver()
 session.run(tf.global_variables_initializer())
 
 def _parser(example):
-    feature_set={'train/label':tf.FixedLenSequenceFeature([],tf.float32,allow_missing=True),
-                'train/image':tf.FixedLenFeature([],tf.string)}
+    feature_set={'label':tf.FixedLenSequenceFeature([],tf.float32,allow_missing=True),
+                'image':tf.FixedLenFeature([],tf.string)}
     features = tf.parse_single_example(example,features=feature_set)
 
-    image = tf.decode_raw(features['train/image'], tf.float32)
+    image = tf.decode_raw(features['image'], tf.float32)
     image = tf.reshape (image, [256,256,3])
-    label = tf.cast(features['train/label'], tf.float32)
-    rand = randint(0,4)
-    image = tf.image.rot90(image, rand)
+    label = tf.cast(features['label'], tf.float32)
+    #rand = randint(0,4)
+    #image = tf.image.rot90(image, rand)
     return image, label
 
 def train():
     training_filename = ["/home/szaman5/Phytoplankton_Classifier/data/train.tfrecords"]
     validation_filename = ["/home/szaman5/Phytoplankton_Classifier/data/validation.tfrecords"]
+    
+    data_dir = "/home/szaman5/Phytoplankton_Classifier/two_class_data/"
+    data_list = [data_dir + "train0v" + str(i)+".tfrecords" for i in range(8)]
+
+    validation_list = [data_dir + "validation0v"+ str(i)+".tfrecords" for i in range(8)]
 
     filename = tf.placeholder(tf.string, shape=[None])
 
-    dataset = tf.data.TFRecordDataset(filename)
+    #dataset = tf.data.TFRecordDataset(filename)
     
-    dataset = dataset.map(_parser,num_parallel_calls=32)
-    dataset = dataset.shuffle(buffer_size = 6400)
+    dataset = (tf.data.Dataset.from_tensor_slices(data_list).interleave(lambda x:tf.data.TFRecordDataset(x).map(_parser, num_parallel_calls = 48).prefetch(256),cycle_length=24,block_length=32)) 
+    dataset = dataset.shuffle(buffer_size =2048)
     dataset = dataset.batch(32)
-    dataset = dataset.prefetch(buffer_size = 3200)
+    dataset = dataset.prefetch(buffer_size = 512)
+    
+ 
+    #dataset = dataset.map(_parser,num_parallel_calls=32)
+    #dataset = dataset.shuffle(buffer_size = 6400)
+    #dataset = dataset.batch(32)
+    #dataset = dataset.prefetch(buffer_size = 3200)
     
     iterator = dataset.make_initializable_iterator()
 
     next_element = iterator.get_next()
 
+    val_dataset = (tf.data.Dataset.from_tensor_slices(validation_list).interleave(lambda x:tf.data.TFRecordDataset(x).map(_parser, num_parallel_calls = 48).prefetch(256),cycle_length=24,block_length=32)) 
+    val_dataset = val_dataset.shuffle(buffer_size = 2048)
+    val_dataset = val_dataset.batch(64)
+    val_dataset = val_dataset.prefetch(buffer_size = 100)
+
+    val_iterator = val_dataset.make_initializable_iterator()
+    next_val_element = val_iterator.get_next()
     
-    NUM_EPOCHS = 300
+    NUM_EPOCHS = 150
     #summary = session.run(merged)
     #train_writer.add_summary(summary,0)
     predictions = []
     actual = []
     confusion_matrix = 0
+    
     for epoch in range(NUM_EPOCHS):
-        session.run(iterator.initializer, feed_dict={filename:training_filename})
+        #session.run(iterator.initializer, feed_dict={filename:training_filename})
+        session.run(iterator.initializer)
         num_batches = 0
         epoch_train_accuracy = 0
         epoch_val_accuracy = 0
@@ -222,11 +244,12 @@ def train():
                 train_writer.add_summary(summary,epoch+1)
             except tf.errors.OutOfRangeError as e:
                 break
-        session.run(iterator.initializer, feed_dict = {filename:validation_filename})
+        #session.run(iterator.initializer, feed_dict = {filename:validation_filename})
+        session.run(val_iterator.initializer)
         valid_batches = 0
         while True:
             try:
-                x_valid_batch, y_valid_batch = session.run(next_element)
+                x_valid_batch, y_valid_batch = session.run(next_val_element)
                 feed_dict_val = {x:x_valid_batch,y_true:y_valid_batch, keep_prob:1}
                 val_loss,val_acc,summary,cm = session.run([cost,accuracy,merged,confusion], feed_dict_val)
                 epoch_val_accuracy += val_acc

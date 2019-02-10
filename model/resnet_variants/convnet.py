@@ -25,11 +25,14 @@ def create_weights(shape):
 def create_biases(size):
     return tf.Variable(tf.constant(0.05, shape=[size]))
 
+def batch_norm():
+    print("todo")
 def create_conv_layer(input,
         num_input_channels,
         conv_filter_size,
         num_filters,
-        name,pool,group_num=0):
+        name,pool,group_num=0,
+        keep_prob = 0.3):
     shape = [conv_filter_size,conv_filter_size, num_input_channels, num_filters]
 
     with tf.name_scope(name):
@@ -45,11 +48,15 @@ def create_conv_layer(input,
             layer = tf.nn.conv2d(input=input,filter=weights,strides=[1,1,1,1],padding='SAME',name=name)
             layer += biases
             #tf.summary.histogram('conv_layers',layer)
+
         if pool:
             max_pool_name = "maxpool"+str(group_num)
             with tf.name_scope(max_pool_name):
                 layer = tf.nn.max_pool(value=layer,ksize=[1,2,2,1],strides=[1,2,2,1],padding='SAME')
         layer = tf.nn.relu(layer)
+
+        dropout_layer_name = 'dropout'+str(group_num)
+        layer = tf.nn.dropout(layer,keep_prob=keep_prob, noise_shape=None, seed=3,name=dropout_layer_name)
         #tf.summary.histogram('activations',layer)
     return layer
 
